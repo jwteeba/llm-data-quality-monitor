@@ -105,16 +105,6 @@ MYSQL_DB_NAME=your_database
 OPENAI_API_KEY=your_openai_key
 ```
 
-### Run with Docker
-
-```bash
-# Build and start the application
-docker-compose up --build
-
-# Access the dashboard
-open http://localhost:8501
-```
-
 ### Run Locally
 
 ```bash

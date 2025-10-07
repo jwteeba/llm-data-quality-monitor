@@ -1,6 +1,8 @@
 import os
 import sys
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import streamlit as st
 from detector.anomaly_detector import (
     detect_anomalies,
@@ -8,9 +10,6 @@ from detector.anomaly_detector import (
     summarize_anomalies_llm,
 )
 from utils.utils import create_db_engine, read_data_from_mysql, read_data_from_s3
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 
 # ---------------------------
 # Streamlit UI
