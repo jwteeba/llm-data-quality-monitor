@@ -23,8 +23,8 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install poetry
+        python -m pip install --upgrade pip --break-system-packages
+        pip install poetry --break-system-packages
         poetry lock
         poetry install
     
@@ -52,8 +52,8 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install poetry
+        python -m pip install --upgrade pip --break-system-packages
+        pip install poetry --break-system-packages
         poetry lock
         poetry install
     
@@ -84,8 +84,8 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install black flake8 isort
+        python -m pip install --upgrade pip --break-system-packages
+        pip install black flake8 isort --break-system-packages
     
     - name: Run Black
       run: black --check src/ tests/
@@ -102,12 +102,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Run Bandit Security Scan
-      uses: securecodewarrior/github-action-bandit@v1
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
       with:
-        path: src/
+        python-version: 3.11
+    
+    - name: Run Bandit Security Scan
+      run: |
+        pip install bandit --break-system-packages
+        bandit -r src/ -f json -o bandit-report.json || true
+        bandit -r src/
     
     - name: Run Safety Check
       run: |
-        pip install safety
+        pip install safety --break-system-packages
         safety check

@@ -4,11 +4,13 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
-import pytest
+
+from llm_data_quality_monitor.detector.anomaly_detector import (
+    detect_anomalies,
+    summarize_anomalies_llm,
+)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-from llm_data_quality_monitor.detector.anomaly_detector import (
-    detect_anomalies, summarize_anomalies_llm)
 
 
 def test_detect_anomalies():

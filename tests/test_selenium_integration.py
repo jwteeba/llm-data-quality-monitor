@@ -1,5 +1,4 @@
 import subprocess
-import threading
 import time
 
 import pytest
@@ -7,7 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait
 
 
 class TestStreamlitSelenium:
@@ -167,5 +166,5 @@ class TestStreamlitSelenium:
                 By.CSS_SELECTOR, "[data-testid='stAlert']"
             )
             assert error_element.is_displayed()
-        except:
+        except Exception:
             pass

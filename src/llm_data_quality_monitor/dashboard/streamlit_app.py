@@ -2,14 +2,15 @@ import os
 import sys
 
 import streamlit as st
+from detector.anomaly_detector import (
+    detect_anomalies,
+    plot_anomalies_interactive,
+    summarize_anomalies_llm,
+)
+from utils.utils import create_db_engine, read_data_from_mysql, read_data_from_s3
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from detector.anomaly_detector import (detect_anomalies,
-                                       plot_anomalies_interactive,
-                                       summarize_anomalies_llm)
-from utils.utils import (create_db_engine, read_data_from_mysql,
-                         read_data_from_s3)
 
 # ---------------------------
 # Streamlit UI

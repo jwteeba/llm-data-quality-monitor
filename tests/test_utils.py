@@ -3,13 +3,15 @@ import sys
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-import pytest
+
+from llm_data_quality_monitor.utils.utils import (
+    create_db_engine,
+    get_db_credentials,
+    read_data_from_mysql,
+    read_data_from_s3,
+)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-from llm_data_quality_monitor.utils.utils import (create_db_engine,
-                                                  get_db_credentials,
-                                                  read_data_from_mysql,
-                                                  read_data_from_s3)
 
 
 @patch("llm_data_quality_monitor.utils.utils.boto3.client")

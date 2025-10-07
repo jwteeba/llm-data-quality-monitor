@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Others
+coverage.xml
+andit-report.json
+bandit-report.json
+bin

@@ -1,9 +1,8 @@
 import os
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pandas as pd
-import pytest
 from streamlit.testing.v1 import AppTest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
