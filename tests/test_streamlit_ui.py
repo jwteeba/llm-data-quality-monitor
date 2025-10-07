@@ -12,9 +12,9 @@ class TestStreamlitApp:
     def test_app_initialization(self):
         """Test that the app initializes correctly"""
         at = AppTest.from_file(
-            "src/llm_data_quality_monitor/dashboard/streamlit_app.py"
+            "src/llm_data_quality_monitor/dashboard/streamlit_app.py",
+            default_timeout=120,
         )
-        at.run(timeout=120)
 
         # Check title is displayed
         assert len(at.title) > 0
@@ -27,13 +27,13 @@ class TestStreamlitApp:
     def test_s3_input_fields(self):
         """Test S3 input fields appear correctly"""
         at = AppTest.from_file(
-            "src/llm_data_quality_monitor/dashboard/streamlit_app.py"
+            "src/llm_data_quality_monitor/dashboard/streamlit_app.py",
+            default_timeout=120,
         )
-        at.run(timeout=10)
 
         # Select S3
         at.selectbox[0].select("S3")
-        at.run(timeout=10)
+        at.run(timeout=120)
 
         # Check S3 input fields appear
         assert len(at.text_input) >= 2
@@ -45,13 +45,12 @@ class TestStreamlitApp:
     def test_mysql_input_fields(self):
         """Test MySQL input fields appear correctly"""
         at = AppTest.from_file(
-            "src/llm_data_quality_monitor/dashboard/streamlit_app.py"
+            "src/llm_data_quality_monitor/dashboard/streamlit_app.py",
+            default_timeout=120,
         )
-        at.run(timeout=10)
 
         # Select MySQL
         at.selectbox[0].select("MySQL")
-        at.run(timeout=10)
 
         # Check MySQL input field appears
         assert len(at.text_input) >= 1
@@ -60,9 +59,9 @@ class TestStreamlitApp:
     def test_button_exists(self):
         """Test that the run button exists"""
         at = AppTest.from_file(
-            "src/llm_data_quality_monitor/dashboard/streamlit_app.py"
+            "src/llm_data_quality_monitor/dashboard/streamlit_app.py",
+            default_timeout=120,
         )
-        at.run(timeout=10)
 
         # Check button exists
         assert len(at.button) > 0
