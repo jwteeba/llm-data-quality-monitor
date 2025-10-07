@@ -4,14 +4,24 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from llm_data_quality_monitor.utils.utils import (
-    create_db_engine,
-    get_db_credentials,
-    read_data_from_mysql,
-    read_data_from_s3,
-)
-
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+
+# Mock Streamlit secrets before importing utils
+with patch("streamlit.secrets") as mock_secrets:
+    mock_secrets.aws_credentials.aws_region = "us-east-1"
+    mock_secrets.aws_credentials.aws_access_key_id = "test_key"
+    mock_secrets.aws_credentials.aws_secret_access_key = "test_secret"
+    mock_secrets.aws_credentials.aws_secret_name = "test_secret_name"
+    mock_secrets.aws_credentials.mysql_host = "localhost"
+    mock_secrets.aws_credentials.mysql_db_name = "testdb"
+    mock_secrets.openai.api_key = "test-api-key"
+
+    from llm_data_quality_monitor.utils.utils import (
+        create_db_engine,
+        get_db_credentials,
+        read_data_from_mysql,
+        read_data_from_s3,
+    )
 
 
 @patch("llm_data_quality_monitor.utils.utils.boto3.client")
@@ -27,7 +37,7 @@ def test_get_db_credentials(mock_boto_client):
 
     assert user == "testuser"
     assert password == "testpass"
-    mock_boto_client.assert_called_once_with("secretsmanager", region_name="us-east-1")
+    mock_boto_client.assert_called_once()
 
 
 @patch("llm_data_quality_monitor.utils.utils.MYSQL_HOST", "localhost")

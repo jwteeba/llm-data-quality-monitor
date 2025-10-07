@@ -1,22 +1,25 @@
 import json
-import os
 
 import boto3
 import pandas as pd
-from dotenv import load_dotenv
+import streamlit as st
 from sqlalchemy import MetaData, Table, create_engine, select
 
-load_dotenv()
-
-AWS_SECRET = os.getenv("AWS_SECRET")
-MYSQL_DB_NAME = os.getenv("MYSQL_DB_NAME")
-MYSQL_HOST = os.getenv("MYSQL_HOST")
+AWS_SECRET = st.secrets.aws_credentials.aws_secret_name
+MYSQL_DB_NAME = st.secrets.aws_credentials.mysql_db_name
+MYSQL_HOST = st.secrets.aws_credentials.mysql_host
+AWS_ACCESS_KEY_ID = st.secrets.aws_credentials.aws_access_key_id
+AWS_SECRET_ACCESS_KEY = st.secrets.aws_credentials.aws_secret_access_key
+AWS_REGION = st.secrets.aws_credentials.aws_region
 
 
 def get_db_credentials():
     """Get database credentials from AWS Secrets Manager"""
     client = boto3.client(
-        "secretsmanager", region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+        "secretsmanager",
+        region_name=AWS_REGION,
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
     )
     response = client.get_secret_value(SecretId=AWS_SECRET)
     credentials = json.loads(response["SecretString"])
@@ -50,7 +53,12 @@ def read_data_from_mysql(table_name, engine):
 
 def read_data_from_s3(bucket, key):
     """Read data from S3 bucket"""
-    s3 = boto3.client("s3")
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        region_name=AWS_REGION,
+    )
     obj = s3.get_object(Bucket=bucket, Key=key)
     df = pd.read_csv(obj["Body"])
     return df
