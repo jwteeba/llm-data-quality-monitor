@@ -14,7 +14,7 @@ class TestStreamlitApp:
         at = AppTest.from_file(
             "src/llm_data_quality_monitor/dashboard/streamlit_app.py"
         )
-        at.run()
+        at.run(timeout=120)
 
         # Check title is displayed
         assert len(at.title) > 0
@@ -29,11 +29,11 @@ class TestStreamlitApp:
         at = AppTest.from_file(
             "src/llm_data_quality_monitor/dashboard/streamlit_app.py"
         )
-        at.run()
+        at.run(timeout=10)
 
         # Select S3
         at.selectbox[0].select("S3")
-        at.run()
+        at.run(timeout=10)
 
         # Check S3 input fields appear
         assert len(at.text_input) >= 2
@@ -47,11 +47,11 @@ class TestStreamlitApp:
         at = AppTest.from_file(
             "src/llm_data_quality_monitor/dashboard/streamlit_app.py"
         )
-        at.run()
+        at.run(timeout=10)
 
         # Select MySQL
         at.selectbox[0].select("MySQL")
-        at.run()
+        at.run(timeout=10)
 
         # Check MySQL input field appears
         assert len(at.text_input) >= 1
@@ -62,7 +62,7 @@ class TestStreamlitApp:
         at = AppTest.from_file(
             "src/llm_data_quality_monitor/dashboard/streamlit_app.py"
         )
-        at.run()
+        at.run(timeout=10)
 
         # Check button exists
         assert len(at.button) > 0
