@@ -1,0 +1,31 @@
+[project]
+name = "llm-data-quality-monitor"
+version = "0.1.0"
+description = ""
+package-mode = false
+authors = [
+    {name = "Jah-Wilson Teeba",email = "therealjwil07@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "pymysql (>=1.1.2,<2.0.0)",
+    "pandas (>=2.3.3,<3.0.0)",
+    "sqlalchemy (>=2.0.43,<3.0.0)",
+    "openai (>=2.1.0,<3.0.0)",
+    "streamlit (>=1.50.0,<2.0.0)",
+    "plotly (>=6.3.1,<7.0.0)",
+    "numpy (>=2.3.3,<3.0.0)",
+    "pytest (>=8.4.2,<9.0.0)",
+    "testcontainers (>=4.13.1,<5.0.0)",
+    "boto3 (>=1.35.0,<2.0.0)",
+    "streamlit-testing (>=0.1.0,<1.0.0)",
+    "selenium (>=4.0.0,<5.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "llm_data_quality_monitor", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

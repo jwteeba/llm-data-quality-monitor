@@ -1,0 +1,41 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly on Monday
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+    
+    - name: Install Poetry
+      run: |
+        python -m pip install --upgrade pip
+        pip install poetry
+    
+    - name: Update dependencies
+      run: |
+        poetry update
+    
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update dependencies'
+        title: 'chore: update dependencies'
+        body: |
+          Automated dependency update
+          
+          - Updated all dependencies to latest versions
+          - Updated poetry.lock file
+        branch: dependency-updates
+        delete-branch: true
