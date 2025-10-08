@@ -114,7 +114,7 @@ def summarize_anomalies_llm(anomalies: dict) -> str:
     Cache LLM summaries based on anomalies hash.
     """
 
-    client = OpenAI()
+    client = OpenAI(api_key=st.secrets.openai.api_key)
 
     prompt = f"""
     You are a senior data quality engineer.
