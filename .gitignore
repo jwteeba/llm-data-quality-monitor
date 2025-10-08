@@ -211,3 +211,4 @@ coverage.xml
 andit-report.json
 bandit-report.json
 bin
+.streamlit
