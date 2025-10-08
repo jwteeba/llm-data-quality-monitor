@@ -1,6 +1,6 @@
 # LLM-Powered Data Quality Monitor
 
-<!-- ![Preview](images/llm_data_quality_screencast.gif) -->
+![Preview](images/app_main.png)` +
 
 ## Problem It Solves
 
