@@ -212,3 +212,5 @@ andit-report.json
 bandit-report.json
 bin
 .streamlit
+# Large media files
+images/llm_data_quality_screencast.gif
