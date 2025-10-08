@@ -1,5 +1,7 @@
 # LLM-Powered Data Quality Monitor
 
+![Preview](images/app_main.png)` +
+
 ## Problem It Solves
 
 Data quality issues lead to:
