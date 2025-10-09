@@ -1,6 +1,6 @@
 # LLM-Powered Data Quality Monitor
 
-![Preview](images/app_main.png)` +
+![Preview](images/streamlit-streamlit_app.gif)
 
 ## Problem It Solves
 
