@@ -39,17 +39,10 @@ graph TD
         C3 --> C4[Generate Human-Readable Reports]
     end
 
-    %% System Orchestration
-    subgraph D[System Orchestration]
-        direction TB
-        D1[Dockerized Application] --> D2[Deployed on Cloud e.g. AWS EC2. TBD]
-    end
-
     %% Connections
     B1 --> C1
     B2 --> C1
     C4 --> A3
-    D1 --> A2
 ```
 
 ## Technology Stack
