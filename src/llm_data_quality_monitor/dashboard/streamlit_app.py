@@ -11,9 +11,24 @@ from detector.anomaly_detector import (
 )
 from utils.utils import create_db_engine, read_data_from_mysql, read_data_from_s3
 
-# ---------------------------
-# Streamlit UI
-# ---------------------------
+
+def check_passcode():
+    if "auth" not in st.session_state:
+        st.session_state.auth = False
+
+    if not st.session_state.auth:
+        st.title("🔐 Passcode Required")
+        code = st.text_input("Enter Passcode", type="password")
+
+        if st.button("Submit"):
+            if code == st.secrets.get("app-key").get("passcode"):
+                st.session_state.auth = True
+            else:
+                st.error("Invalid passcode")
+        st.stop()
+
+
+check_passcode()
 
 
 st.title("🧠 LLM Data Quality Dashboard")
