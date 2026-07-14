@@ -106,7 +106,7 @@ def plot_anomalies_interactive(anomalies: dict):
         st.info(f"ℹ️ Low Cardinality Columns: {anomalies['low_cardinality']}")
 
 
-# ============== Cached LLM Summary ==============
+# ============== Cached LLM Summary. ==============
 @st.cache_data(show_spinner=False, max_entries=20)
 def summarize_anomalies_llm(anomalies: dict, api_key: str) -> str:
     """Use OpenAI to summarize anomalies in natural language.
