@@ -108,13 +108,13 @@ def plot_anomalies_interactive(anomalies: dict):
 
 # ============== Cached LLM Summary ==============
 @st.cache_data(show_spinner=False, max_entries=20)
-def summarize_anomalies_llm(anomalies: dict) -> str:
+def summarize_anomalies_llm(anomalies: dict, api_key: str) -> str:
     """Use OpenAI to summarize anomalies in natural language.
 
     Cache LLM summaries based on anomalies hash.
     """
 
-    client = OpenAI(api_key=st.secrets.openai.api_key)
+    client = OpenAI(api_key=api_key)
 
     prompt = f"""
     You are a senior data quality engineer.

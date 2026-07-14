@@ -1,103 +1,153 @@
-import os
-import sys
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+from llm_data_quality_monitor.utils.utils import (
+    check_postgres_connection,
+    check_s3_connection,
+    create_postgres_engine,
+    list_postgres_tables,
+    list_s3_objects,
+    read_data_from_postgres,
+    read_data_from_s3,
+)
 
-# Mock Streamlit secrets before importing utils
-with patch("streamlit.secrets") as mock_secrets:
-    mock_secrets.aws_credentials.aws_region = "us-east-1"
-    mock_secrets.aws_credentials.aws_access_key_id = "test_key"
-    mock_secrets.aws_credentials.aws_secret_access_key = "test_secret"
-    mock_secrets.aws_credentials.aws_secret_name = "test_secret_name"
-    mock_secrets.aws_credentials.mysql_host = "localhost"
-    mock_secrets.aws_credentials.mysql_db_name = "testdb"
-    mock_secrets.openai.api_key = "test-api-key"
+PG_CFG = {
+    "host": "localhost",
+    "port": 5432,
+    "dbname": "testdb",
+    "user": "testuser",
+    "password": "testpass",
+    "sslmode": "prefer",
+}
 
-    from llm_data_quality_monitor.utils.utils import (
-        create_db_engine,
-        get_db_credentials,
-        read_data_from_mysql,
-        read_data_from_s3,
-    )
-
-
-@patch("llm_data_quality_monitor.utils.utils.boto3.client")
-def test_get_db_credentials(mock_boto_client):
-    """Test getting database credentials from AWS Secrets Manager"""
-    mock_client = MagicMock()
-    mock_boto_client.return_value = mock_client
-    mock_client.get_secret_value.return_value = {
-        "SecretString": '{"username": "testuser", "password": "testpass"}'
-    }
-
-    user, password = get_db_credentials()
-
-    assert user == "testuser"
-    assert password == "testpass"
-    mock_boto_client.assert_called_once()
+S3_CFG = {
+    "access_key_id": "AKIATEST",
+    "secret_access_key": "secret",
+    "region": "us-east-1",
+    "session_token": None,
+}
 
 
-@patch("llm_data_quality_monitor.utils.utils.MYSQL_HOST", "localhost")
-@patch("llm_data_quality_monitor.utils.utils.MYSQL_DB_NAME", "testdb")
-@patch("llm_data_quality_monitor.utils.utils.get_db_credentials")
 @patch("llm_data_quality_monitor.utils.utils.create_engine")
-def test_create_db_engine(mock_create_engine, mock_get_credentials):
-    """Test creating SQLAlchemy engine"""
-    mock_get_credentials.return_value = ("testuser", "testpass")
+def test_create_postgres_engine(mock_create_engine):
     mock_engine = MagicMock()
     mock_create_engine.return_value = mock_engine
 
-    engine = create_db_engine()
+    engine = create_postgres_engine(PG_CFG)
 
-    mock_create_engine.assert_called_once_with(
-        "mysql+pymysql://testuser:testpass@localhost:3306/testdb",
-        connect_args={"connect_timeout": 30, "read_timeout": 30, "write_timeout": 30},
-        pool_pre_ping=True,
-        pool_recycle=3600,
-    )
+    mock_create_engine.assert_called_once()
+    call_url = mock_create_engine.call_args[0][0]
+    assert "postgresql+psycopg2" in call_url
+    assert "localhost" in call_url
     assert engine == mock_engine
+
+
+@patch("llm_data_quality_monitor.utils.utils.create_postgres_engine")
+def test_postgres_connection_success(mock_engine_fn):
+    mock_engine = MagicMock()
+    mock_engine_fn.return_value = mock_engine
+    mock_conn = MagicMock()
+    mock_engine.connect.return_value.__enter__.return_value = mock_conn
+
+    ok, msg = check_postgres_connection(PG_CFG)
+
+    assert ok is True
+    assert "successful" in msg.lower()
+
+
+@patch("llm_data_quality_monitor.utils.utils.create_postgres_engine")
+def test_postgres_connection_failure(mock_engine_fn):
+    mock_engine_fn.side_effect = Exception("connection refused")
+
+    ok, msg = check_postgres_connection(PG_CFG)
+
+    assert ok is False
+    assert "connection refused" in msg
+
+
+@patch("llm_data_quality_monitor.utils.utils.inspect")
+@patch("llm_data_quality_monitor.utils.utils.create_postgres_engine")
+def test_list_postgres_tables(mock_engine_fn, mock_inspect):
+    mock_inspector = MagicMock()
+    mock_inspect.return_value = mock_inspector
+    mock_inspector.get_table_names.return_value = ["users", "orders"]
+
+    tables = list_postgres_tables(PG_CFG)
+
+    assert tables == ["users", "orders"]
 
 
 @patch("llm_data_quality_monitor.utils.utils.MetaData")
 @patch("llm_data_quality_monitor.utils.utils.Table")
 @patch("llm_data_quality_monitor.utils.utils.select")
-def test_read_data_from_mysql(mock_select, mock_table, mock_metadata):
-    """Test reading data from MySQL database"""
+@patch("llm_data_quality_monitor.utils.utils.create_postgres_engine")
+def test_read_data_from_postgres(
+    mock_engine_fn, mock_select, mock_table, mock_metadata
+):
     mock_engine = MagicMock()
+    mock_engine_fn.return_value = mock_engine
     mock_conn = MagicMock()
     mock_engine.connect.return_value.__enter__.return_value = mock_conn
-
     mock_result = MagicMock()
-    mock_result.fetchall.return_value = [("row1",), ("row2",)]
-    mock_result.keys.return_value = ["column1"]
+    mock_result.fetchall.return_value = [("val1",), ("val2",)]
+    mock_result.keys.return_value = ["col1"]
     mock_conn.execute.return_value = mock_result
 
-    df = read_data_from_mysql("test_table", mock_engine)
+    df = read_data_from_postgres("users", PG_CFG)
 
     assert isinstance(df, pd.DataFrame)
     assert len(df) == 2
-    mock_table.assert_called_once()
-    mock_select.assert_called_once()
+
+
+@patch("llm_data_quality_monitor.utils.utils.boto3.client")
+def test_s3_connection_success(mock_boto):
+    mock_client = MagicMock()
+    mock_boto.return_value = mock_client
+
+    ok, msg = check_s3_connection(S3_CFG)
+
+    assert ok is True
+    mock_client.list_buckets.assert_called_once()
+
+
+@patch("llm_data_quality_monitor.utils.utils.boto3.client")
+def test_s3_connection_failure(mock_boto):
+    mock_boto.side_effect = Exception("invalid credentials")
+
+    ok, msg = check_s3_connection(S3_CFG)
+
+    assert ok is False
+    assert "invalid credentials" in msg
+
+
+@patch("llm_data_quality_monitor.utils.utils.boto3.client")
+def test_list_s3_objects(mock_boto):
+    mock_client = MagicMock()
+    mock_boto.return_value = mock_client
+    paginator = MagicMock()
+    mock_client.get_paginator.return_value = paginator
+    paginator.paginate.return_value = [
+        {"Contents": [{"Key": "data/file1.csv"}, {"Key": "data/file2.csv"}]}
+    ]
+
+    keys = list_s3_objects(S3_CFG, "my-bucket", "data/")
+
+    assert keys == ["data/file1.csv", "data/file2.csv"]
 
 
 @patch("llm_data_quality_monitor.utils.utils.boto3.client")
 @patch("llm_data_quality_monitor.utils.utils.pd.read_csv")
-def test_read_data_from_s3(mock_read_csv, mock_boto_client):
-    """Test reading data from S3 bucket"""
-    mock_s3_client = MagicMock()
-    mock_boto_client.return_value = mock_s3_client
-    mock_s3_client.get_object.return_value = {"Body": "csv_content"}
+def test_read_data_from_s3(mock_read_csv, mock_boto):
+    mock_client = MagicMock()
+    mock_boto.return_value = mock_client
+    mock_client.get_object.return_value = {"Body": "csv_content"}
+    expected_df = pd.DataFrame({"col1": [1, 2]})
+    mock_read_csv.return_value = expected_df
 
-    mock_df = pd.DataFrame({"col1": [1, 2]})
-    mock_read_csv.return_value = mock_df
+    df = read_data_from_s3(S3_CFG, "my-bucket", "data/file.csv")
 
-    result = read_data_from_s3("test-bucket", "test-key")
-
-    mock_s3_client.get_object.assert_called_once_with(
-        Bucket="test-bucket", Key="test-key"
+    mock_client.get_object.assert_called_once_with(
+        Bucket="my-bucket", Key="data/file.csv"
     )
-    mock_read_csv.assert_called_once_with("csv_content")
-    assert result.equals(mock_df)
+    assert df.equals(expected_df)

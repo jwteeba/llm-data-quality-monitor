@@ -1,20 +1,12 @@
-import os
-import sys
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-
-# Mock Streamlit secrets before importing anomaly_detector
-with patch("streamlit.secrets") as mock_secrets:
-    mock_secrets.openai.api_key = "test_api_key"
-
-    from llm_data_quality_monitor.detector.anomaly_detector import (
-        detect_anomalies,
-        summarize_anomalies_llm,
-    )
+from llm_data_quality_monitor.detector.anomaly_detector import (
+    detect_anomalies,
+    summarize_anomalies_llm,
+)
 
 
 def test_detect_anomalies():
@@ -75,14 +67,9 @@ def test_detect_anomalies_no_numeric_columns():
     assert anomalies["row_count"] == 3
 
 
-@patch("streamlit.secrets")
 @patch("llm_data_quality_monitor.detector.anomaly_detector.OpenAI")
-def test_summarize_anomalies_llm(mock_openai, mock_secrets):
+def test_summarize_anomalies_llm(mock_openai):
     """Test LLM anomaly summarization"""
-    # Mock Streamlit secrets
-    mock_secrets.openai.api_key = "test_api_key"
-
-    # Mock OpenAI response
     mock_client = MagicMock()
     mock_openai.return_value = mock_client
     mock_response = MagicMock()
@@ -95,7 +82,7 @@ def test_summarize_anomalies_llm(mock_openai, mock_secrets):
         "outliers": {"col2": 3},
     }
 
-    result = summarize_anomalies_llm(anomalies)
+    result = summarize_anomalies_llm(anomalies, "test-api-key")
 
     assert result == "Test summary of anomalies"
     mock_client.chat.completions.create.assert_called_once()

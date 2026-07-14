@@ -2,9 +2,10 @@
 """
 Script to run UI tests for the Streamlit application
 """
+
+import os
 import subprocess
 import sys
-import os
 
 
 def run_streamlit_tests():

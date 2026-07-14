@@ -1,64 +1,88 @@
-import json
-
 import boto3
 import pandas as pd
-import streamlit as st
-from sqlalchemy import MetaData, Table, create_engine, select
-
-AWS_SECRET = st.secrets.aws_credentials.aws_secret_name
-MYSQL_DB_NAME = st.secrets.aws_credentials.mysql_db_name
-MYSQL_HOST = st.secrets.aws_credentials.mysql_host
-AWS_ACCESS_KEY_ID = st.secrets.aws_credentials.aws_access_key_id
-AWS_SECRET_ACCESS_KEY = st.secrets.aws_credentials.aws_secret_access_key
-AWS_REGION = st.secrets.aws_credentials.aws_region
+from sqlalchemy import MetaData, Table, create_engine, inspect, select, text
 
 
-def get_db_credentials():
-    """Get database credentials from AWS Secrets Manager"""
-    client = boto3.client(
-        "secretsmanager",
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    )
-    response = client.get_secret_value(SecretId=AWS_SECRET)
-    credentials = json.loads(response["SecretString"])
-    return credentials["username"], credentials["password"]
+def create_postgres_engine(config: dict):
+    """Create a SQLAlchemy engine from a user-supplied PostgreSQL config dict."""
+    host = config["host"]
+    port = config.get("port", 5432)
+    dbname = config["dbname"]
+    user = config["user"]
+    password = config.get("password", "")
+    sslmode = config.get("sslmode", "prefer")
 
-
-def create_db_engine():
-    """Create SQLAlchemy engine with optimized connection settings"""
-    user = get_db_credentials()[0]
-    password = get_db_credentials()[1]
-
-    engine = create_engine(
-        f"mysql+pymysql://{user}:{password}@{MYSQL_HOST}:3306/{MYSQL_DB_NAME}",
-        connect_args={"connect_timeout": 30, "read_timeout": 30, "write_timeout": 30},
+    url = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}"
+    return create_engine(
+        url,
+        connect_args={"sslmode": sslmode, "connect_timeout": 10},
         pool_pre_ping=True,
         pool_recycle=3600,
     )
-    return engine
 
 
-def read_data_from_mysql(table_name, engine):
-    """Read data from MySQL database"""
+def check_postgres_connection(config: dict) -> tuple[bool, str]:
+    """Return (success, message) after attempting a lightweight connection test."""
+    try:
+        engine = create_postgres_engine(config)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True, "Connection successful."
+    except Exception as exc:
+        return False, str(exc)
+
+
+def list_postgres_tables(config: dict) -> list[str]:
+    """Return all table names visible to the user in the connected database."""
+    engine = create_postgres_engine(config)
+    inspector = inspect(engine)
+    return inspector.get_table_names()
+
+
+def read_data_from_postgres(table_name: str, config: dict) -> pd.DataFrame:
+    """Read an entire table from PostgreSQL into a DataFrame."""
+    engine = create_postgres_engine(config)
     metadata = MetaData()
     table = Table(table_name, metadata, autoload_with=engine)
     with engine.connect() as conn:
-        query = select(table)
-        result = conn.execute(query)
-        df = pd.DataFrame(result.fetchall(), columns=result.keys())
-    return df
+        result = conn.execute(select(table))
+        return pd.DataFrame(result.fetchall(), columns=result.keys())
 
 
-def read_data_from_s3(bucket, key):
-    """Read data from S3 bucket"""
-    s3 = boto3.client(
-        "s3",
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        region_name=AWS_REGION,
-    )
-    obj = s3.get_object(Bucket=bucket, Key=key)
-    df = pd.read_csv(obj["Body"])
-    return df
+def _make_s3_client(config: dict):
+    kwargs = {
+        "aws_access_key_id": config["access_key_id"],
+        "aws_secret_access_key": config["secret_access_key"],
+        "region_name": config.get("region", "us-east-1"),
+    }
+    if config.get("session_token"):
+        kwargs["aws_session_token"] = config["session_token"]
+    return boto3.client("s3", **kwargs)
+
+
+def check_s3_connection(config: dict) -> tuple[bool, str]:
+    """Return (success, message) after attempting to list the configured bucket."""
+    try:
+        client = _make_s3_client(config)
+        client.list_buckets()
+        return True, "Connection successful."
+    except Exception as exc:
+        return False, str(exc)
+
+
+def list_s3_objects(config: dict, bucket: str, prefix: str = "") -> list[str]:
+    """Return object keys in *bucket* matching *prefix*."""
+    client = _make_s3_client(config)
+    paginator = client.get_paginator("list_objects_v2")
+    keys = []
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            keys.append(obj["Key"])
+    return keys
+
+
+def read_data_from_s3(config: dict, bucket: str, key: str) -> pd.DataFrame:
+    """Read a CSV object from S3 into a DataFrame using user-supplied config."""
+    client = _make_s3_client(config)
+    obj = client.get_object(Bucket=bucket, Key=key)
+    return pd.read_csv(obj["Body"])

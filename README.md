@@ -1,6 +1,5 @@
 # LLM-Powered Data Quality Monitor
 
-![Preview](images/streamlit-streamlit_app.gif)
 
 ## Problem It Solves
 
@@ -25,10 +24,17 @@ graph TD
     end
 
     %% Data Sources
-    subgraph B[Data Sources]
+    subgraph B[User-Configured Data Sources]
         direction TB
-        B1[S3 Storage]
-        B2[MySQL RDS]
+        B1[S3 Connection Manager]
+        B2[PostgreSQL Connection Manager]
+    end
+
+    %% Session State
+    subgraph D[Session Memory Only]
+        direction TB
+        D1[Connection Configs]
+        D2[OpenAI API Key]
     end
 
     %% Data Processing and Checks
@@ -40,40 +46,49 @@ graph TD
     end
 
     %% Connections
-    B1 --> C1
-    B2 --> C1
+    B1 --> D1
+    B2 --> D1
+    D1 --> C1
+    D2 --> C3
     C4 --> A3
 ```
 
 ## Technology Stack
 
-- **Data Sources**: AWS S3, MySQL RDS
+- **Data Sources**: AWS S3, PostgreSQL
 - **Processing**: Python, Pandas, NumPy
 - **Visualization**: Plotly, Streamlit
-- **AI**: OpenAI GPT-4
-- **Deployment**: Docker
+- **AI**: OpenAI GPT-4o-mini (user-supplied key)
+- **Security**: Session-only credential storage — nothing written to disk
 - **Testing**: Pytest, Selenium, Streamlit-testing
 
 ## Pipeline Steps
 
-1. **Data Ingestion**
-   - Connect to AWS S3 buckets
-   - Query MySQL RDS tables
+1. **Connection Management**
+   - Add named PostgreSQL or S3 connections within the session
+   - All credentials held in session memory only — never written to disk
+   - Test connections before use
+   - Switch between multiple named connections within the same session
+
+2. **Data Ingestion**
+   - Browse and select tables from a connected PostgreSQL database
+   - Browse and select objects from a connected S3 bucket
    - Load data into Pandas DataFrames
 
-2. **Quality Analysis**
+3. **Quality Analysis**
    - Detect missing values
    - Identify duplicate records
    - Find statistical outliers (IQR method)
    - Calculate skewness metrics
    - Check for zero-variance columns
 
-3. **AI Summarization**
+4. **AI Summarization**
+   - User provides their own OpenAI API key via the sidebar (held in session memory only, never stored)
    - Send anomaly data to OpenAI
    - Generate human-readable explanations
    - Provide actionable recommendations
 
-4. **Interactive Dashboard**
+5. **Interactive Dashboard**
    - Display metrics and charts
    - Show anomaly visualizations
    - Present AI-generated insights
@@ -82,88 +97,78 @@ graph TD
 
 ### Prerequisites
 
-- Docker installed
-- AWS credentials configured
-- OpenAI API key
-
-### Environment Setup
-
-Create `.env` file:
-
-```bash
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_DEFAULT_REGION=us-east-1
-AWS_SECRET=your_secrets_manager_secret
-MYSQL_HOST=your_rds_endpoint
-MYSQL_DB_NAME=your_database
-OPENAI_API_KEY=your_openai_key
-```
+- Python >= 3.11
+- An OpenAI API key ([get one here](https://platform.openai.com/api-keys))
+- Access to a PostgreSQL database and/or AWS S3 bucket
 
 ### Run Locally
 
 ```bash
-# Install dependencies
+# Install the package and all dependencies
 pip install -e .
 
-# Start Streamlit app
+# Start the Streamlit app
 streamlit run src/llm_data_quality_monitor/dashboard/streamlit_app.py
 ```
 
+No `.env` file or `secrets.toml` configuration is required. All credentials and connection details are entered through the app UI and held in session memory only.
+
+### Streamlit Cloud Deployment
+
+No secrets need to be pre-configured in the Streamlit Cloud secrets UI. Users supply their own OpenAI API key and connection credentials directly in the app — nothing is stored server-side.
+
 ## How to Test
 
-### Unit Tests
-
 ```bash
-# Run all tests
+# Run all unit tests
 pytest tests/ -v
 
 # Run specific test files
 pytest tests/test_utils.py -v
 pytest tests/test_anomaly_detector.py -v
-```
+pytest tests/test_streamlit_app.py -v
 
-### UI Tests
-
-```bash
-# Install UI testing dependencies
-pip install streamlit-testing selenium
-
-# Run Streamlit component tests
+# Run Streamlit UI component tests
 pytest tests/test_streamlit_ui.py -v
 
-# Run Selenium integration tests (requires Chrome)
+# Run Selenium integration tests (requires Chrome and ChromeDriver in PATH)
 pytest tests/test_selenium_integration.py -v
-
-# Run all UI tests
-python run_ui_tests.py
 ```
-
-### Test Requirements
-
-- Chrome/Chromium browser (for Selenium tests)
-- ChromeDriver in PATH
-- Valid AWS credentials (for integration tests)
 
 ## Usage
 
-1. **Select Data Source**: Choose between MySQL or S3
-2. **Enter Connection Details**: 
-   - MySQL: Table name
-   - S3: Bucket name and object key
-3. **Run Quality Check**: Click the button to analyze data
-4. **Review Results**:
-   - View interactive charts
-   - Read AI-generated summary
-   - Examine raw anomaly data
-   - Browse sample data
+1. **Enter your OpenAI API key** in the sidebar — held in session memory only, never written to disk
+2. **Select a data source**: PostgreSQL or S3
+3. **Add a connection** using the expander form:
+   - PostgreSQL: host, port, database, username, password, SSL mode
+   - S3: Access Key ID, Secret Access Key, region, optional session token
+4. **Test the connection** before saving
+5. **Save the connection** under a name to reuse within the session
+6. **Select a saved connection** from the dropdown
+7. **Browse and select** a table (PostgreSQL) or object (S3)
+8. **Run Data Quality Check** to analyze the data
+9. **Review results**:
+   - Interactive anomaly charts
+   - AI-generated summary
+   - Raw anomaly data
+   - Sample data preview
+
+## Credential Security
+
+- All credentials (PostgreSQL passwords, AWS keys, session tokens, OpenAI API key) are held exclusively in Streamlit session state for the duration of the browser session
+- Nothing is written to disk — closing the browser tab discards everything
+- Each user's credentials are isolated to their own session
+- No server-side storage, no encryption keys to manage, no credential files to protect
 
 ## Features
 
-- ✅ **Multi-source data ingestion** (S3, MySQL)
+- ✅ **User-configurable connections** (PostgreSQL, S3) — no hardcoded credentials
+- ✅ **Session-only credential storage** — nothing written to disk
+- ✅ **Connection testing** before use
+- ✅ **Multi-connection management** — save and switch between named connections within a session
+- ✅ **Table and object browsing** from connected sources
+- ✅ **Per-user OpenAI API key** — each user supplies their own
 - ✅ **Comprehensive anomaly detection**
 - ✅ **AI-powered explanations**
 - ✅ **Interactive visualizations**
-- ✅ **Containerized deployment**
 - ✅ **Comprehensive test suite**
-- ✅ **Real-time processing**

@@ -213,3 +213,4 @@ andit-report.json
 bandit-report.json
 bin
 .streamlit
+.safety-project.ini

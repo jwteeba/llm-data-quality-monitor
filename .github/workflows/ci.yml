@@ -84,4 +84,4 @@ jobs:
     - name: Run Safety Check
       run: |
         pip install safety --break-system-packages
-        safety check
+        safety scan
