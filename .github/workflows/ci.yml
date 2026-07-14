@@ -82,6 +82,9 @@ jobs:
         bandit -r src/
 
     - name: Run Safety Scan
+      env:
+        SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
       run: |
         pip install safety --break-system-packages
-        safety scan src tests
+        safety scan
+
