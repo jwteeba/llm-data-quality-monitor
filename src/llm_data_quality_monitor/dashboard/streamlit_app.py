@@ -63,6 +63,9 @@ with st.sidebar:
     )
     st.caption("[Get an API key](https://platform.openai.com/api-keys)")
 
+    st.divider()
+    st.caption("📖 [View full documentation](https://github.com/jwteeba/llm-data-quality-monitor/blob/main/README.md)")
+
 data_source = st.selectbox("Select data source:", ["PostgreSQL", "S3"])
 
 # ══════════════════════════════════════════════════════════════════════════════
