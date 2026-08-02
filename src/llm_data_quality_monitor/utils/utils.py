@@ -1,6 +1,28 @@
+import io
+
 import boto3
 import pandas as pd
 from sqlalchemy import MetaData, Table, create_engine, inspect, select, text
+
+SUPPORTED_S3_FORMATS = (".csv", ".parquet", ".json", ".xlsx", ".xls")
+
+
+def read_uploaded_file(uploaded_file, sample_rows: int | None = None) -> pd.DataFrame:
+    """Read a Streamlit UploadedFile into a DataFrame."""
+    name = uploaded_file.name.lower()
+    if name.endswith(".parquet"):
+        df = pd.read_parquet(uploaded_file)
+    elif name.endswith(".json"):
+        df = pd.read_json(uploaded_file)
+    elif name.endswith((".xlsx", ".xls")):
+        df = pd.read_excel(uploaded_file)
+    else:
+        df = pd.read_csv(uploaded_file)
+    return (
+        df.sample(sample_rows, random_state=42)
+        if sample_rows and sample_rows < len(df)
+        else df
+    )
 
 
 def create_postgres_engine(config: dict):
@@ -39,13 +61,18 @@ def list_postgres_tables(config: dict) -> list[str]:
     return inspector.get_table_names()
 
 
-def read_data_from_postgres(table_name: str, config: dict) -> pd.DataFrame:
-    """Read an entire table from PostgreSQL into a DataFrame."""
+def read_data_from_postgres(
+    table_name: str, config: dict, sample_rows: int | None = None
+) -> pd.DataFrame:
+    """Read a table from PostgreSQL into a DataFrame, with optional row sampling."""
     engine = create_postgres_engine(config)
     metadata = MetaData()
     table = Table(table_name, metadata, autoload_with=engine)
     with engine.connect() as conn:
-        result = conn.execute(select(table))
+        query = select(table)
+        if sample_rows:
+            query = query.limit(sample_rows)
+        result = conn.execute(query)
         return pd.DataFrame(result.fetchall(), columns=result.keys())
 
 
@@ -81,8 +108,24 @@ def list_s3_objects(config: dict, bucket: str, prefix: str = "") -> list[str]:
     return keys
 
 
-def read_data_from_s3(config: dict, bucket: str, key: str) -> pd.DataFrame:
-    """Read a CSV object from S3 into a DataFrame using user-supplied config."""
+def read_data_from_s3(
+    config: dict, bucket: str, key: str, sample_rows: int | None = None
+) -> pd.DataFrame:
+    """Read CSV, Parquet, JSON, or Excel from S3 into a DataFrame."""
     client = _make_s3_client(config)
     obj = client.get_object(Bucket=bucket, Key=key)
-    return pd.read_csv(obj["Body"])
+    body = obj["Body"].read()
+    key_lower = key.lower()
+    if key_lower.endswith(".parquet"):
+        df = pd.read_parquet(io.BytesIO(body))
+    elif key_lower.endswith(".json"):
+        df = pd.read_json(io.BytesIO(body))
+    elif key_lower.endswith((".xlsx", ".xls")):
+        df = pd.read_excel(io.BytesIO(body))
+    else:
+        df = pd.read_csv(io.BytesIO(body))
+    return (
+        df.sample(sample_rows, random_state=42)
+        if sample_rows and sample_rows < len(df)
+        else df
+    )

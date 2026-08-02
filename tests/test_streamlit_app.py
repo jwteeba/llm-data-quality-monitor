@@ -17,29 +17,30 @@ def test_data_processing_logic():
 
 
 @patch("llm_data_quality_monitor.utils.utils.boto3.client")
-def test_s3_integration_logic(mock_boto):
+@patch("llm_data_quality_monitor.utils.utils.pd.read_csv")
+def test_s3_integration_logic(mock_read_csv, mock_boto):
     """Test S3 data reading logic with user-supplied config"""
     from llm_data_quality_monitor.utils.utils import read_data_from_s3
 
     mock_client = MagicMock()
     mock_boto.return_value = mock_client
-    mock_client.get_object.return_value = {"Body": "col1,col2\n1,A\n2,B"}
+    mock_body = MagicMock()
+    mock_body.read.return_value = b"col1,col2\n1,A\n2,B"
+    mock_client.get_object.return_value = {"Body": mock_body}
+    mock_read_csv.return_value = pd.DataFrame({"col1": [1, 2], "col2": ["A", "B"]})
 
-    with patch("pandas.read_csv") as mock_read_csv:
-        mock_read_csv.return_value = pd.DataFrame({"col1": [1, 2], "col2": ["A", "B"]})
+    cfg = {
+        "access_key_id": "AKIATEST",
+        "secret_access_key": "secret",
+        "region": "us-east-1",
+        "session_token": None,
+    }
+    df = read_data_from_s3(cfg, "test-bucket", "test-key.csv")
 
-        cfg = {
-            "access_key_id": "AKIATEST",
-            "secret_access_key": "secret",
-            "region": "us-east-1",
-            "session_token": None,
-        }
-        df = read_data_from_s3(cfg, "test-bucket", "test-key")
-
-        assert len(df) == 2
-        mock_client.get_object.assert_called_once_with(
-            Bucket="test-bucket", Key="test-key"
-        )
+    assert len(df) == 2
+    mock_client.get_object.assert_called_once_with(
+        Bucket="test-bucket", Key="test-key.csv"
+    )
 
 
 def test_error_handling_logic():

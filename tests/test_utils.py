@@ -141,7 +141,9 @@ def test_list_s3_objects(mock_boto):
 def test_read_data_from_s3(mock_read_csv, mock_boto):
     mock_client = MagicMock()
     mock_boto.return_value = mock_client
-    mock_client.get_object.return_value = {"Body": "csv_content"}
+    mock_body = MagicMock()
+    mock_body.read.return_value = b"col1,col2\n1,A\n2,B"
+    mock_client.get_object.return_value = {"Body": mock_body}
     expected_df = pd.DataFrame({"col1": [1, 2]})
     mock_read_csv.return_value = expected_df
 

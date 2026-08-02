@@ -23,6 +23,7 @@ def detect_anomalies(df: pd.DataFrame):
     # 4. Outliers (IQR method)
     numeric_df = df.select_dtypes(include=np.number)
     outlier_counts = {}
+    outlier_row_indices = set()
     for col in numeric_df.columns:
         Q1 = numeric_df[col].quantile(0.25)
         Q3 = numeric_df[col].quantile(0.75)
@@ -31,6 +32,7 @@ def detect_anomalies(df: pd.DataFrame):
             numeric_df[col] > (Q3 + 1.5 * IQR)
         )
         outlier_counts[col] = int(outlier_mask.sum())
+        outlier_row_indices.update(numeric_df.index[outlier_mask].tolist())
     anomalies["outliers"] = outlier_counts
 
     # 5. Skewness
@@ -41,7 +43,22 @@ def detect_anomalies(df: pd.DataFrame):
         col: df[col].nunique() for col in df.columns if df[col].nunique() < 5
     }
 
-    # 7. General info
+    # 7. Type inconsistencies (mixed numeric/string in object columns)
+    type_issues = []
+    for col in df.select_dtypes(include=object).columns:
+        non_null = df[col].dropna()
+        numeric_mask = pd.to_numeric(non_null, errors="coerce").notna()
+        if numeric_mask.any() and (~numeric_mask).any():
+            type_issues.append(col)
+    anomalies["type_inconsistencies"] = type_issues
+
+    # 8. Row-level anomaly flags (rows with any missing value or outlier)
+    missing_row_indices = set(df.index[df.isna().any(axis=1)].tolist())
+    flagged_indices = missing_row_indices | outlier_row_indices
+    anomalies["flagged_rows"] = sorted(flagged_indices)[:100]  # cap at 100
+    anomalies["flagged_row_count"] = len(flagged_indices)
+
+    # 9. General info
     anomalies["row_count"] = len(df)
     anomalies["column_count"] = len(df.columns)
 
@@ -99,11 +116,15 @@ def plot_anomalies_interactive(anomalies: dict):
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Zero variance and low cardinality info
+    # Zero variance, low cardinality, and type inconsistency info
     if anomalies["zero_variance_columns"]:
         st.warning(f"⚠️ Zero Variance Columns: {anomalies['zero_variance_columns']}")
     if anomalies["low_cardinality"]:
         st.info(f"ℹ️ Low Cardinality Columns: {anomalies['low_cardinality']}")
+    if anomalies.get("type_inconsistencies"):
+        st.warning(f"⚠️ Mixed-Type Columns: {anomalies['type_inconsistencies']}")
+    if anomalies.get("flagged_row_count", 0) > 0:
+        st.metric("Flagged Rows (missing or outlier)", anomalies["flagged_row_count"])
 
 
 # ============== Cached LLM Summary. ==============
