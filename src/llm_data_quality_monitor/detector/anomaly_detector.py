@@ -76,7 +76,7 @@ def detect_anomalies(df: pd.DataFrame):
     for col in df.select_dtypes(include=object).columns:
         non_null = df[col].dropna()
         numeric_mask = pd.to_numeric(non_null, errors="coerce").notna()
-        if numeric_mask.any() and (~numeric_mask.values).any():
+        if numeric_mask.sum() > 0 and numeric_mask.sum() < len(numeric_mask):
             type_issues.append(col)
     anomalies["type_inconsistencies"] = type_issues
 
