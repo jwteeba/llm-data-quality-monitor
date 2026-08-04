@@ -18,7 +18,7 @@ from llm_data_quality_monitor.utils.utils import (
     read_uploaded_file,
 )
 
-# ── Session state ─────────────────────────────────────────────────────────────
+# Session state
 
 if "pg_connections" not in st.session_state:
     st.session_state.pg_connections = {}
@@ -30,7 +30,7 @@ if "rules" not in st.session_state:
     st.session_state.rules = []
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# Helpers
 
 
 def _run_quality_check(df):
@@ -96,7 +96,7 @@ def _run_quality_check(df):
     )
 
 
-# ── App ───────────────────────────────────────────────────────────────────────
+# App
 
 st.title("🧠 LLM Data Quality Dashboard")
 
@@ -168,9 +168,7 @@ with st.sidebar:
 
 data_source = st.selectbox("Select data source:", ["File Upload", "PostgreSQL", "S3"])
 
-# ══════════════════════════════════════════════════════════════════════════════
 # File Upload panel
-# ══════════════════════════════════════════════════════════════════════════════
 if data_source == "File Upload":
     uploaded = st.file_uploader(
         "Upload a file",
@@ -187,9 +185,7 @@ if data_source == "File Upload":
         except Exception as err:
             st.error(f"Error: {err}")
 
-# ══════════════════════════════════════════════════════════════════════════════
 # PostgreSQL panel
-# ══════════════════════════════════════════════════════════════════════════════
 elif data_source == "PostgreSQL":
     pg_names = list(st.session_state.pg_connections.keys())
     selected_pg = st.selectbox("Saved connections:", pg_names) if pg_names else None
@@ -272,9 +268,7 @@ elif data_source == "PostgreSQL":
                 except Exception as err:
                     st.error(f"Error: {err}")
 
-# ══════════════════════════════════════════════════════════════════════════════
 # S3 panel
-# ══════════════════════════════════════════════════════════════════════════════
 elif data_source == "S3":
     s3_names = list(st.session_state.s3_connections.keys())
     selected_s3 = st.selectbox("Saved connections:", s3_names) if s3_names else None

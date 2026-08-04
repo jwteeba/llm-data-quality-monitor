@@ -2,7 +2,35 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from jinja2 import Template
 from openai import OpenAI
+from pydantic import BaseModel
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+
+class AnomalySummary(BaseModel):
+    """Structured anomaly summary from LLM."""
+
+    problems: list[str]
+    causes: list[str]
+    recommendations: list[str]
+    summary: str
+
+
+ANOMALY_PROMPT = Template("""
+You are a senior data quality engineer analyzing dataset anomalies.
+
+Dataset Anomaly Report:
+{{ anomalies | tojson }}
+
+Provide a structured analysis with:
+1. **Critical Issues**: List only anomalies that impact data usability (missing >10%, duplicates, type mismatches, zero-variance columns)
+2. **Root Causes**: Identify likely causes (data pipeline errors, schema changes, upstream failures)
+3. **Immediate Actions**: Prioritized steps for data engineers (validation, remediation, escalation)
+4. **Executive Summary**: One to Three sentence impact statement
+
+Be concise, technical, and actionable. Focus on severity and business impact. Never invent facts.
+""")
 
 
 def detect_anomalies(df: pd.DataFrame):
@@ -48,7 +76,7 @@ def detect_anomalies(df: pd.DataFrame):
     for col in df.select_dtypes(include=object).columns:
         non_null = df[col].dropna()
         numeric_mask = pd.to_numeric(non_null, errors="coerce").notna()
-        if numeric_mask.any() and (~numeric_mask).any():
+        if numeric_mask.any() and (~numeric_mask.values).any():
             type_issues.append(col)
     anomalies["type_inconsistencies"] = type_issues
 
@@ -127,34 +155,26 @@ def plot_anomalies_interactive(anomalies: dict):
         st.metric("Flagged Rows (missing or outlier)", anomalies["flagged_row_count"])
 
 
-# ============== Cached LLM Summary. ==============
 @st.cache_data(show_spinner=False, max_entries=20)
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def summarize_anomalies_llm(anomalies: dict, api_key: str) -> str:
     """Use OpenAI to summarize anomalies in natural language.
 
     Cache LLM summaries based on anomalies hash.
+    Retries up to 3 times with exponential backoff on failure.
     """
-
     client = OpenAI(api_key=api_key)
-
-    prompt = f"""
-    You are a senior data quality engineer.
-    Analyze the following dataset anomaly report and produce a short,
-    insightful summary:
-    {anomalies}
-
-    Include:
-    - Key problems detected
-    - Possible causes
-    - Recommended next steps for data engineers
-    Keep it concise and professional.
-    """
+    prompt = ANOMALY_PROMPT.render(anomalies=anomalies)
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "You are a data quality expert."},
+            {
+                "role": "system",
+                "content": "You are a senior data quality engineer. Analyze anomalies with focus on severity, business impact, and actionable remediation. Be concise and technical.",
+            },
             {"role": "user", "content": prompt},
         ],
+        temperature=0.3,
     )
     return str(response.choices[0].message.content)

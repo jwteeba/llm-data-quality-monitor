@@ -42,7 +42,7 @@ def profile_dataframe(df: pd.DataFrame) -> dict:
             # Type inconsistency: mixed numeric and non-numeric strings
             if s.dtype == object:
                 numeric_mask = pd.to_numeric(non_null, errors="coerce").notna()
-                mixed = numeric_mask.any() and (~numeric_mask).any()
+                mixed = numeric_mask.any() and (~numeric_mask.values).any()
                 entry["mixed_types"] = bool(mixed)
 
         profile[col] = entry
