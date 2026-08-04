@@ -36,10 +36,10 @@ if "rules" not in st.session_state:
 def _run_quality_check(df):
     import pandas as pd
 
-    anomalies = detect_anomalies(df)
+    anomalies = detect_anomalies(df, outlier_method="modified_zscore")
     profile = profile_dataframe(df)
     violations = evaluate_rules(
-        st.session_state.rules, anomalies, anomalies["row_count"]
+        st.session_state.rules, anomalies, anomalies["dataset_level"]["row_count"]
     )
 
     plot_anomalies_interactive(anomalies)
@@ -77,11 +77,11 @@ def _run_quality_check(df):
     else:
         with st.spinner("🧠 Generating AI summary..."):
             summary = summarize_anomalies_llm(anomalies, openai_api_key)
-        st.subheader("📋 Anomaly Summary")
+        st.subheader("🪄 AI Anomaly Summary")
         st.write(summary)
 
-    st.subheader("🧩 Raw Anomalies")
-    st.json(anomalies)
+    with st.expander("🧾 Raw Anomaly Report (JSON)"):
+        st.json(anomalies)
 
     st.subheader("🧾 Sample Data")
     st.dataframe(df.head())

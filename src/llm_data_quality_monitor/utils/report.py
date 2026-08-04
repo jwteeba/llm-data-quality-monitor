@@ -7,12 +7,18 @@ def build_report_csv(anomalies: dict, violations: list[dict], profile: dict) -> 
     """Return a CSV report as bytes combining anomaly summary, rule violations, and profile."""
     buf = io.StringIO()
 
-    # ── Summary ───────────────────────────────────────────────────────────────
+    # Summary
     summary = pd.DataFrame(
         [
-            {"metric": "row_count", "value": anomalies["row_count"]},
-            {"metric": "column_count", "value": anomalies["column_count"]},
-            {"metric": "duplicate_rows", "value": anomalies["duplicate_rows"]},
+            {"metric": "row_count", "value": anomalies["dataset_level"]["row_count"]},
+            {
+                "metric": "column_count",
+                "value": anomalies["dataset_level"]["column_count"],
+            },
+            {
+                "metric": "duplicate_rows",
+                "value": anomalies["dataset_level"]["duplicate_rows"],
+            },
             {
                 "metric": "zero_variance_columns",
                 "value": ", ".join(anomalies.get("zero_variance_columns", [])),
@@ -22,24 +28,26 @@ def build_report_csv(anomalies: dict, violations: list[dict], profile: dict) -> 
     buf.write("## Summary\n")
     summary.to_csv(buf, index=False)
 
-    # ── Missing values ────────────────────────────────────────────────────────
+    # Missing values
     buf.write("\n## Missing Values\n")
     pd.DataFrame(
-        anomalies["missing_values"].items(), columns=["column", "missing_count"]
+        anomalies["column_level"]["missing_values"].items(),
+        columns=["column", "missing_count"],
     ).to_csv(buf, index=False)
 
-    # ── Outliers ──────────────────────────────────────────────────────────────
+    # Outliers
     buf.write("\n## Outliers\n")
     pd.DataFrame(
-        anomalies["outliers"].items(), columns=["column", "outlier_count"]
+        anomalies["column_level"]["outliers"].items(),
+        columns=["column", "outlier_count"],
     ).to_csv(buf, index=False)
 
-    # ── Rule violations ───────────────────────────────────────────────────────
+    # Rule violations
     if violations:
         buf.write("\n## Rule Violations\n")
         pd.DataFrame(violations).to_csv(buf, index=False)
 
-    # ── Column profile ────────────────────────────────────────────────────────
+    # Column profile
     buf.write("\n## Column Profile\n")
     profile_rows = []
     for col, stats in profile.items():

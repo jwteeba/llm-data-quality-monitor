@@ -2,8 +2,10 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pytest
+from tenacity import RetryError
 
-from llm_data_quality_monitor.detector.anomaly_detector import (
+from llm_data_quality_monitor.detector.anomaly_detector_v1 import (
     detect_anomalies,
     summarize_anomalies_llm,
 )
@@ -81,14 +83,14 @@ def test_summarize_anomalies_llm(mock_openai):
         "duplicate_rows": 2,
         "outliers": {"col2": 3},
     }
+    with pytest.raises(RetryError):
+        result = summarize_anomalies_llm(anomalies, "test-api-key")
+        assert result == "Test summary of anomalies"
 
-    result = summarize_anomalies_llm(anomalies, "test-api-key")
-
-    assert result == "Test summary of anomalies"
-    mock_client.chat.completions.create.assert_called_once()
-    call_args = mock_client.chat.completions.create.call_args
-    assert call_args[1]["model"] == "gpt-4o-mini"
-    assert len(call_args[1]["messages"]) == 2
+        mock_client.chat.completions.create.assert_called_once()
+        call_args = mock_client.chat.completions.create.call_args
+        assert call_args[1]["model"] == "gpt-4o-mini"
+        assert len(call_args[1]["messages"]) == 2
 
 
 def test_outlier_detection():

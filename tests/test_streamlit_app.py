@@ -5,7 +5,7 @@ import pandas as pd
 
 def test_data_processing_logic():
     """Test the core data processing logic without Streamlit UI"""
-    from llm_data_quality_monitor.detector.anomaly_detector import detect_anomalies
+    from llm_data_quality_monitor.detector.anomaly_detector_v1 import detect_anomalies
 
     test_df = pd.DataFrame({"col1": [1, 2, 3, 4, 5], "col2": ["A", "B", "C", "D", "E"]})
     anomalies = detect_anomalies(test_df)
@@ -45,7 +45,7 @@ def test_s3_integration_logic(mock_read_csv, mock_boto):
 
 def test_error_handling_logic():
     """Test error handling in data processing"""
-    from llm_data_quality_monitor.detector.anomaly_detector import detect_anomalies
+    from llm_data_quality_monitor.detector.anomaly_detector_v1 import detect_anomalies
 
     empty_df = pd.DataFrame()
     anomalies = detect_anomalies(empty_df)
